@@ -35,7 +35,7 @@ def make_population(n_customers):
         cfg = AGE_BANDS[age]
         income = sample_income(cfg["income_mean"], cfg["income_std"], rng)
         # 3. 소득에서 잔액, 한도, 건전성 파생시키기
-        balance = income * rng.uniform(0.2, 1.5)
+        balance = income * rng.uniform(0.1, 0.8)
         limit = income * rng.uniform(1.5, 4.0)
         # 건전성
         # rng.beta(2, 2): 개인 편차 => 베타분포 사용 0~1 사이에서 가운데가 많이 나오고 양 끝은 드물게 나오는 분포
@@ -62,7 +62,8 @@ def simulate(pop, days=120):
         health = c['soundness']
         income = c["income"]
         balance = c['balance']
-        daily_spend = income / 30 * 0.8 # 월급의 80%는 소비라고 가정 
+        spend_ratio = rng.uniform(0.85, 1.10)
+        daily_spend = income / 30 * spend_ratio  
         # 현금 서비스: 잔액이 바닥나고, 한도가 남아있을 때
         cash_debt = 0  
 

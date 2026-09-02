@@ -63,6 +63,8 @@ def simulate(pop, days=120):
         income = c["income"]
         balance = c['balance']
         daily_spend = income / 30 * 0.8 # 월급의 80%는 소비라고 가정 
+        # 현금 서비스: 잔액이 바닥나고, 한도가 남아있을 때
+        cash_debt = 0  
 
         for day in range(days):
             ## 건전성 
@@ -84,11 +86,21 @@ def simulate(pop, days=120):
             spend = spend * (1 + (0.5 - health) * 0.4) # 건전성이 0.5보다 낮으면 지출이 늘어남
             balance -= spend
 
+            # 오늘 당겨쓴 금액 
+            cash_advance = 0
+            if balance < daily_spend and cash_debt < c['credit_limit']:
+                # 건전성이 낮을수록 현금서비스 쓸 확률이 높음 
+                if rng.random() < (1-health) * 0.5:
+                    cash_advance = daily_spend * rng.uniform(1,3) # 하루치의 1~3배 당겨씀
+                    balance = balance + cash_advance 
+                    cash_debt += cash_advance
+
             records.append({
                 "customer_id": c["customer_id"],
                 "day": day,
                 "health": round(health, 3),
                 "balance": round(balance, 1),
+                "cash_debt": cash_debt,
             })
 
 

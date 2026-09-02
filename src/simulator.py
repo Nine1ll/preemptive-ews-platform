@@ -60,8 +60,12 @@ def simulate(pop, days=120):
     records = []
     for _, c in pop.iterrows():
         health = c['soundness']
+        income = c["income"]
+        balance = c['balance']
+        daily_spend = income / 30 * 0.8 # 월급의 80%는 소비라고 가정 
 
         for day in range(days):
+            ## 건전성 
             # (1) 매일의 작은 흔들림 + 평균회귀
             health = health + 0.02 * (0.5 - health) + rng.normal(0, 0.02)
             # (2) 가끔 큰 충격 (2% 확률)
@@ -70,11 +74,23 @@ def simulate(pop, days=120):
             # (3) 0~1 범위 강제
             health = float(np.clip(health, 0.0, 1.0))
 
+            # (1) 수입: 30일 마다 월급
+            if day % 30 == 0:
+                balance = balance + income
+
+            # (2) 지출: 매일 나감 + 건전성 영향
+            spend = daily_spend * rng.uniform(0.7, 1.3)
+            # 건전성 낮으면 지출이 늘어남 (소비를 못 줄임)
+            spend = spend * (1 + (0.5 - health) * 0.4) # 건전성이 0.5보다 낮으면 지출이 늘어남
+            balance -= spend
+
             records.append({
                 "customer_id": c["customer_id"],
                 "day": day,
                 "health": round(health, 3),
+                "balance": round(balance, 1),
             })
+
 
     assert len(records) == days * len(pop), "고객 데이터가 적게 생성됐습니다."
     return pd.DataFrame(records)
@@ -89,4 +105,7 @@ if __name__ == "__main__":
     assert df['soundness'].between(0,1).all(), "건전성이 0~1 범위를 벗어남"
     print("건전성 범위 통과")
 
-    simulate(df)
+    log = simulate(df)
+    assert log["balance"].notna().all(), "잔액에 NaN(빈 값)이 있습니다."
+
+    print(log[(log.customer_id==0)&(log.day==29)], log[(log.customer_id==0)&(log.day==30)])

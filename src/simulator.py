@@ -76,7 +76,7 @@ def simulate(pop, days=120):
                 "health": round(health, 3),
             })
 
-    assert len(records) == days * len(pop), "고객 날짜 데이터가 부족합니다."
+    assert len(records) == days * len(pop), "고객 데이터가 적게 생성됐습니다."
     return pd.DataFrame(records)
 
 

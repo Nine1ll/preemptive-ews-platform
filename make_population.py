@@ -54,3 +54,39 @@ def make_population(n_customers):
         })
 
     return pd.DataFrame(rows)
+
+
+def simulate(pop, days=120):
+    records = []
+    for _, c in pop.iterrows():
+        health = c['soundness']
+
+        for day in range(days):
+            # (1) 매일의 작은 흔들림 + 평균회귀
+            health = health + 0.02 * (0.5 - health) + rng.normal(0, 0.02)
+            # (2) 가끔 큰 충격 (2% 확률)
+            if rng.random() < 0.02:
+                health = health - rng.uniform(0.1, 0.3)
+            # (3) 0~1 범위 강제
+            health = float(np.clip(health, 0.0, 1.0))
+
+            records.append({
+                "customer_id": c["customer_id"],
+                "day": day,
+                "health": round(health, 3),
+            })
+
+    assert len(records) == days * len(pop), "고객 날짜 데이터가 부족합니다."
+    return pd.DataFrame(records)
+
+
+
+if __name__ == "__main__":
+    df = make_population(300)
+    assert df['age_band'].isin(['20s','30s','40s','50s','60s']).all(), "나이대가 20~60대를 벗어남"
+    print("나이대 범위 통과")
+
+    assert df['soundness'].between(0,1).all(), "건전성이 0~1 범위를 벗어남"
+    print("건전성 범위 통과")
+
+    simulate(df)

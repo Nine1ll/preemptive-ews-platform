@@ -66,6 +66,8 @@ def simulate(pop, days=120):
         daily_spend = income / 30 * spend_ratio  
         # 현금 서비스: 잔액이 바닥나고, 한도가 남아있을 때
         cash_debt = 0  
+        # 공과금 밀린 달 수 
+        utility_overdue = 0
 
         for day in range(days):
             ## 건전성 
@@ -96,12 +98,26 @@ def simulate(pop, days=120):
                     balance = balance + cash_advance 
                     cash_debt += cash_advance
 
+            # 공과금: 매달 15일에 청구
+            if day % 30 == 15:
+                utility_bill = income / 30 * 3
+                if balance > utility_bill:
+                    # 돈은 있다. 근데 아주 건전성 낮으면 그래도 미룰 수 있음
+                    if rng.random() < health + 0.5:   # 대부분 냄
+                        balance -= utility_bill
+                        utility_overdue = 0
+                    else:
+                        utility_overdue += 1
+                else:
+                    utility_overdue += 1   # 돈이 없으면 무조건 못 냄
+
             records.append({
                 "customer_id": c["customer_id"],
                 "day": day,
                 "health": round(health, 3),
                 "balance": round(balance, 1),
                 "cash_debt": cash_debt,
+                "utility_overdue": utility_overdue,
             })
 
 
@@ -122,3 +138,12 @@ if __name__ == "__main__":
     assert log["balance"].notna().all(), "잔액에 NaN(빈 값)이 있습니다."
 
     print(log[(log.customer_id==0)&(log.day==29)], log[(log.customer_id==0)&(log.day==30)])
+    per = log.groupby("customer_id").agg(
+        max_overdue=("utility_overdue", "max"),   # 이 고객이 최대 몇 달 밀렸나
+        avg_health=("health", "mean"),
+        ).reset_index()
+
+    overdue_cust = per[per.max_overdue > 0]        # 한 번이라도 밀린 고객
+    print(f"공과금 밀린 고객: {len(overdue_cust)}/300명")
+    print(f"  밀린 고객 평균 건전성:   {overdue_cust.avg_health.mean():.3f}")
+    print(f"  안 밀린 고객 평균 건전성: {per[per.max_overdue==0].avg_health.mean():.3f}")
